@@ -1,0 +1,279 @@
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f8f8f8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+#cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    align-items: center;
+    position: relative;
+    padding: 40px 0;
+}
+
+#cards-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 4px;
+    background: #ccc;
+    transform: translateX(-50%);
+    z-index: 0;
+}
+
+.wrapper {
+    position: relative;
+    display: block;
+    margin: 0;
+    z-index: 1;
+}
+.wrapper.dragging {
+    opacity: 0.5;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    padding: 12px;
+    width: 350px;
+    background: white;
+    position: relative;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.add-stop {
+    text-align: center;
+    font-size: 12px;
+    color: blue;
+    cursor: pointer;
+    user-select: none;
+    margin: 4px 0;
+}
+
+.com-name {
+    font-weight: bold;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 2px 8px;
+    position: absolute;
+    top: -12px;
+    left: 12px;
+    z-index: 2;
+}
+.trash {
+    cursor: pointer;
+    font-size: 18px;
+    background: white;
+    border-radius: 50%;
+    padding: 3px;
+    border: 1px solid #ccc;
+    position: absolute;
+    top: -12px;
+    right: 12px;
+    z-index: 2;
+}
+.reset-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    position: absolute;
+    bottom: -12px;
+    right: 12px;
+    z-index: 2;
+}
+.middle {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+.left-section {
+    display: flex;
+    flex-direction: column;
+}
+.label {
+    font-size: 14px;
+    margin-top: 6px;
+}
+input[type="time"] {
+    margin-top: 4px;
+    padding: 4px;
+    font-size: 14px;
+}
+.right-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.counter {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.counter button {
+    background: green;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+    cursor: pointer;
+}
+.counter input {
+    width: 40px;
+    text-align: center;
+    margin: 0 6px;
+    font-size: 14px;
+}
+
+.drag-handle {
+    position: absolute;
+    top: 50%;
+    left: -15px;
+    transform: translateY(-50%);
+    background: #4cafef;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+}
+.drag-handle:active {
+    cursor: grabbing;
+}
+</style>
+
+<template id="card-template">
+    <div class="wrapper">
+        <div class="add-stop add-stop-above">Add Stop Above</div>
+        <button class="drag-handle">☰</button>
+        <div class="com-name">COM Name</div>
+        <div class="trash">🗑</div>
+        <button class="reset-btn">Reset</button>
+        <div class="container">
+            <div class="middle">
+                <div class="left-section">
+                    <div class="label">Commutators Ready</div>
+                    <label style="color: #545454;">Arrival Time:
+                        <input type="time" value="00:00" style="color: #545454;" />
+                    </label>
+                </div>
+                <div class="right-section">
+                    <div class="counter">
+                        <button class="minus">-</button>
+                        <input type="text" class="count" value="0" readonly>
+                        <button class="plus">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="add-stop add-stop-below">Add Stop Below</div>
+    </div>
+</template>
+
+<div id="cards-container"></div>
+
+<script>
+function createCard(title) {
+    const template = document.getElementById('card-template');
+    const card = template.content.cloneNode(true);
+
+    const wrapper = card.querySelector('.wrapper');
+    const nameLabel = card.querySelector('.com-name');
+    const plusBtn = card.querySelector('.plus');
+    const minusBtn = card.querySelector('.minus');
+    const resetBtn = card.querySelector('.reset-btn');
+    const trashBtn = card.querySelector('.trash');
+    const dragHandle = card.querySelector('.drag-handle');
+    const countLabel = card.querySelector('.count');
+    const addAboveBtn = card.querySelector('.add-stop-above');
+    const addBelowBtn = card.querySelector('.add-stop-below');
+
+    wrapper.draggable = true;
+    nameLabel.textContent = title;
+
+    plusBtn.addEventListener('click', () => countLabel.value = parseInt(countLabel.value) + 1);
+    minusBtn.addEventListener('click', () => countLabel.value = parseInt(countLabel.value) - 1);
+    resetBtn.addEventListener('click', () => countLabel.value = 0);
+    trashBtn.addEventListener('click', () => wrapper.remove());
+
+    addAboveBtn.addEventListener('click', () => {
+        wrapper.parentNode.insertBefore(createCard(title), wrapper);
+        updateAddStopVisibility();
+    });
+    addBelowBtn.addEventListener('click', () => {
+        wrapper.parentNode.insertBefore(createCard(title), wrapper.nextSibling);
+        updateAddStopVisibility();
+    });
+
+    dragHandle.addEventListener('mousedown', () => wrapper.draggable = true);
+    dragHandle.addEventListener('mouseup', () => wrapper.draggable = false);
+
+    wrapper.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', '');
+        wrapper.classList.add('dragging');
+    });
+    wrapper.addEventListener('dragend', () => {
+        wrapper.classList.remove('dragging');
+        updateAddStopVisibility();
+    });
+
+    return card;
+}
+
+const containerEl = document.getElementById('cards-container');
+containerEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const dragging = containerEl.querySelector('.dragging');
+    const afterElement = getDragAfterElement(containerEl, e.clientY);
+    if (!afterElement) {
+        containerEl.appendChild(dragging);
+    } else {
+        containerEl.insertBefore(dragging, afterElement);
+    }
+});
+
+function getDragAfterElement(container, y) {
+    const elements = [...container.querySelectorAll('.wrapper:not(.dragging)')];
+    return elements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        return (offset < 0 && offset > closest.offset) ? { offset, element: child } : closest;
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function updateAddStopVisibility() {
+    const wrappers = containerEl.querySelectorAll('.wrapper');
+    wrappers.forEach((wrapper, idx) => {
+        wrapper.querySelector('.add-stop-above').style.display = idx === 0 ? 'none' : 'block';
+        wrapper.querySelector('.add-stop-below').style.display = idx === wrappers.length - 1 ? 'none' : 'block';
+    });
+}
+
+containerEl.appendChild(createCard('COM 3'));
+containerEl.appendChild(createCard('COM 4'));
+updateAddStopVisibility();
+</script>
