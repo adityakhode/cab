@@ -1,13 +1,18 @@
 from flask import Flask, request, jsonify
 import firebase_admin
 from firebase_admin import credentials, firestore
+import json, os
 
 # Initialize Flask
 app = Flask(__name__)
 
+# Load Firebase credentials from environment variable
+firebase_key = json.loads(os.environ["FIREBASE_KEY"])
+cred = credentials.Certificate(firebase_key)
+
 # Initialize Firebase app (only once)
-cred = credentials.Certificate("1.json")  # Your Firebase service account JSON
-firebase_admin.initialize_app(cred)
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred)
 
 # Firestore client
 db = firestore.client()
@@ -88,4 +93,4 @@ def update_sequence():
 
 # Run Flask app
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
